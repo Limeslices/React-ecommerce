@@ -5,20 +5,19 @@ import Button from '../button/button.component'
 
 import {
   createAuthUserWithEmailAndPassword,
-  createUserDocumentFromAuth
+  createUserDocumentFromAuth,
+  signInWithGooglePopup,
+  signInUser
 } from '../../utils/firebase/firebase.utils'
 
-import './sign-up-form.styles.scss'
-
+import './sign-in-form.styles.scss'
 
 const defaultFormFields = {
-  displayName: '',
   email: '',
-  password: '',
-  confirmPassword: ''
+  password: ''
 }
 
-const SignUpForm = () => {
+const SignInForm = () => {
   const [formFields, setFormFields] = useState(defaultFormFields)
   const { displayName, email, password, confirmPassword } = formFields
   console.log(formFields)
@@ -29,21 +28,21 @@ const SignUpForm = () => {
 
   const handeSubmit = async event => {
     event.preventDefault()
-    if (password !== confirmPassword) {
-      alert('Password do not math')
-      return
-    }
     try {
-      const { user } = await createAuthUserWithEmailAndPassword(email, password)
-      if (!user) return
-      if (!displayName) return
-      await createUserDocumentFromAuth(user, { displayName })
+      const { user } = await signInUser(email, password)
+      console.log(user, 'here')
       resetFormFields()
     } catch (e) {
-      if (e.code === 'auth/email-already-in-use') {
-        alert('Cannot create user, email already in use')
+      switch (e.code) {
+        case 'auth/wrong-password':
+          alert('incorect password for email')
+          break
+        case 'auth/user-not-found':
+            alert('no user associated with this email')
+            break
+        default:
+            console.log(e)
       }
-      console.log('User creation error', e.message)
     }
   }
 
@@ -53,21 +52,16 @@ const SignUpForm = () => {
     setFormFields({ ...formFields, [name]: value })
   }
 
+  const logGoogleUser = async () => {
+    const { user } = await signInWithGooglePopup()
+    await createUserDocumentFromAuth(user)
+  }
+
   return (
-    <div className="sign-up-container">
-      <h2>Don't have an account?</h2>
-      <span>Sign up with your email and password</span>
+    <div className='sign-in-container'>
+      <h2>Already have an account?</h2>
+      <span>Sign in with your email and password</span>
       <form onSubmit={handeSubmit}>
-        <FormInput
-          label='Display Name'
-          type='text'
-          required
-          onChange={handleChange}
-          name='displayName'
-          value={displayName}
-        />
-
-
         <FormInput
           label='Email'
           type='email'
@@ -85,19 +79,15 @@ const SignUpForm = () => {
           name='password'
           value={password}
         />
-
-        <FormInput
-          label='Confirm Password'
-          type='password'
-          required
-          onChange={handleChange}
-          name='confirmPassword'
-          value={confirmPassword}
-        />
-        <Button type='submit'>Sign Up</Button>
+        <div className='buttons-container'>
+          <Button type='submit'>Sign In</Button>
+          <Button buttonType='google' type='button' onClick={logGoogleUser}>
+            Google sign in
+          </Button>
+        </div>
       </form>
     </div>
   )
 }
 
-export default SignUpForm
+export default SignInForm
